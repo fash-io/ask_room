@@ -1,8 +1,9 @@
-from models import db, Question, Tag
 from uuid import UUID
 from sqlalchemy.orm import Session
-from schemas.question import QuestionCreate
+from rapidfuzz import fuzz
 
+from app.models import Question, Tag
+from app.schemas.question import QuestionCreate
 # Create a new question
 def create_question(db: Session, question_data: QuestionCreate, user_id: UUID):
     tags = db.query(Tag).filter(Tag.id.in_(question_data.tags)).all() 
@@ -23,6 +24,7 @@ def create_question(db: Session, question_data: QuestionCreate, user_id: UUID):
     return question
 
 # Get a question by ID
+
 def get_question_by_id(db: Session, question_id: UUID):
     return db.query(Question).filter(Question.id == question_id).first()
 
@@ -69,3 +71,13 @@ def delete_question(db: Session, question_id: UUID):
         db.commit()
         return True
     return False
+
+
+def get_questions_fuzzy(db: Session, query: str):
+    questions = db.query(Question).all()
+    matches = [
+        q for q in questions
+        if fuzz.partial_ratio(query.lower(), q.title.lower()) > 70
+        or fuzz.partial_ratio(query.lower(), q.body.lower()) > 70
+    ]
+    return matches

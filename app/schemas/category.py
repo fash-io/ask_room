@@ -1,17 +1,17 @@
-from pydantic import BaseModel, constr
+from pydantic import BaseModel
 from uuid import UUID
 from datetime import datetime
-
+from typing import Optional
 
 # Common fields
 class CategoryBase(BaseModel):
-    name: constr(min_length=1, max_length=50)
+    name: str
+    description: Optional[str] = None
 
 
 # For creation
 class CategoryCreate(CategoryBase):
     pass
-
 
 # For responses
 class CategoryOut(CategoryBase):
@@ -22,11 +22,4 @@ class CategoryOut(CategoryBase):
     class Config:
         orm_mode = True
 
-
 # For updating
-class CategoryUpdate(CategoryBase):
-    pass
-
-
-class CategoryOutWithQuestions(CategoryOut):
-    questions: list

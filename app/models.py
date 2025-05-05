@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 import enum
 import uuid
 from sqlalchemy import (
@@ -13,28 +13,14 @@ from sqlalchemy import (
     Table,
 )
 from sqlalchemy.orm import relationship
-from database import Base, get_db
+from app.database import Base
 
-from sqlalchemy.dialects.postgresql import UUID
-
-db = get_db()
-
+from sqlalchemy.dialects.postgresql import UUID, JSONB
 
 class UserRole(enum.Enum):
     user = "user"
     moderator = "moderator"
     admin = "admin"
-
-
-class Badge(Base):
-    __tablename__ = "badges"
-
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    name = Column(String(50), unique=True, nullable=False)
-    description = Column(Text, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
-
-    users = relationship("User", secondary="user_badges", back_populates="badges")
 
 
 user_badges = Table(
@@ -44,11 +30,36 @@ user_badges = Table(
     Column("badge_id", UUID(as_uuid=True), ForeignKey("badges.id")),
 )
 
+class BadgeCategory(enum.Enum):
+    participation = "participation"
+    quality       = "quality"
+    community     = "community"
+
+class BadgeLevel(enum.Enum):
+    bronze = "bronze"
+    silver = "silver"
+    gold = "gold"
+
+
+class Badge(Base):
+    __tablename__ = "badges"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    name = Column(String(100), unique=True, nullable=False)
+    description = Column(Text, nullable=True)
+    criteria = Column(JSONB, nullable=True)  
+    created_at = Column(DateTime, default=datetime.utcnow)
+    level = Column(Enum(BadgeLevel), default=BadgeLevel.bronze, nullable=False)
+    category = Column(Enum(BadgeCategory), nullable=False)
+
+    users = relationship("User", secondary=user_badges, back_populates="badges")
+
+
 followers = Table(
     "followers",
     Base.metadata,
     Column("follower_id", UUID(as_uuid=True), ForeignKey("users.id")),
-    Column("followed_id", UUID(as_uuid=True), ForeignKey("users.id")),
+    Column("followed_id", UUID(as_uuid=True), ForeignKey("users.id"))
 )
 
 
@@ -87,7 +98,20 @@ class User(Base):
     answer_votes = relationship(
         "AnswerVote", back_populates="user", cascade="all, delete-orphan"
     )
-    badges = relationship("Badge", secondary="user_badges", back_populates="users")
+    badges = relationship("Badge", secondary=user_badges, back_populates="users")
+    
+    following = relationship(
+    "User",
+    secondary="followers",
+    primaryjoin=id==followers.c.follower_id,
+    secondaryjoin=id==followers.c.followed_id,
+    backref="followers"
+    )
+    
+    def approved_answers_count(self):
+        return sum(1 for ans in self.answers if ans.is_helpful)
+
+
 
 
 question_tags = Table(

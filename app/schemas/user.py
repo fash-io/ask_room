@@ -1,10 +1,18 @@
 from pydantic import BaseModel, EmailStr, constr, HttpUrl
 from uuid import UUID
 from datetime import datetime
-from typing import Optional
+from typing import Optional, List
 
 
-# Base schema: shared fields
+class BadgeOut(BaseModel):
+    id: UUID
+    name: str
+    description: Optional[str]
+
+    class Config:
+        orm_mode = True
+
+
 class UserBase(BaseModel):
     username: constr(min_length=3, max_length=50)
     email: EmailStr
@@ -13,20 +21,14 @@ class UserBase(BaseModel):
     bio: Optional[str] = None
     social_links: Optional[str] = None
 
-
-# Schema for creating a new user
 class UserCreate(UserBase):
     password_hash: constr(min_length=8)
 
-
-# Schema for user login
 class UserLogin(BaseModel):
     username: Optional[constr(min_length=3, max_length=50)] = None
     email: Optional[EmailStr] = None
     password_hash: constr(min_length=8)
 
-
-# Schema for responses: include IDs and timestamps
 class UserOut(UserBase):
     id: UUID
     reputation: int
@@ -35,6 +37,8 @@ class UserOut(UserBase):
     last_login: Optional[datetime]
     is_active: bool
     role: str
+    badges: List[BadgeOut] = []
+    approved_answers_count: int
 
     class Config:
         orm_mode = True

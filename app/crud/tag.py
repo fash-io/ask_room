@@ -1,8 +1,10 @@
 from sqlalchemy.orm import Session
 from uuid import UUID
-from models import Tag
-from schemas.tag import TagCreate, TagOut
 from datetime import datetime
+from rapidfuzz import fuzz
+
+from app.models import Tag
+from app.schemas.tag import TagCreate, TagOut
 
 def create_tag(db: Session, tag_data: TagCreate) -> TagOut:
     # Create a new tag
@@ -77,3 +79,11 @@ def delete_tag(db: Session, tag_id: UUID) -> bool:
         db.commit()
         return True
     return False
+
+def get_tags_fuzzy(db: Session, query: str):
+    tags = db.query(Tag).all()
+    matches = [
+        q for q in tags
+        if fuzz.partial_ratio(query.lower(), q.name.lower()) > 70
+    ]
+    return matches

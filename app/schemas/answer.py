@@ -1,7 +1,7 @@
 from pydantic import BaseModel
 from uuid import UUID
 from datetime import datetime
-from user import UserOut  # Assuming this is your user response schema
+from app.schemas.user import UserOut  
 
 class AnswerBase(BaseModel):
     body: str

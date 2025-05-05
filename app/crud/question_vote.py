@@ -1,7 +1,8 @@
 from sqlalchemy.orm import Session
 from uuid import UUID
-from models import QuestionVote, VoteValue
-from schemas.vote import VoteCreate
+
+from app.models import QuestionVote
+from app.schemas.vote import VoteCreate
 
 
 def create_question_vote(db: Session, vote_data: VoteCreate, user_id: UUID):

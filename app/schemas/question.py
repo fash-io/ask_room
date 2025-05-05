@@ -2,9 +2,9 @@ from pydantic import BaseModel
 from uuid import UUID
 from datetime import datetime
 from typing import List, Optional
-from user import UserOut
-from tag import TagOut
-from category import CategoryOut
+from app.schemas.user import UserOut
+from app.schemas.tag import TagOut
+from app.schemas.category import CategoryOut
 
 class QuestionBase(BaseModel):
     title: str

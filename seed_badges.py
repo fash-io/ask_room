@@ -1,12 +1,12 @@
-# seed_badges.py
-
 from uuid import uuid4
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy.exc import IntegrityError
 
-from app.database import SessionLocal
+from app.database import SessionLocal, engine, Base
 from app.models import Badge, BadgeLevel, BadgeCategory
+# from app.models import *
 
+Base.metadata.create_all(bind=engine)
 # Your badge definitions
 BADGES = [
     {
@@ -91,7 +91,7 @@ def seed_badges():
             criteria=data["criteria"],
             category=BadgeCategory(data["category"]),
             level=BadgeLevel(data["level"]),
-            created_at=datetime.utcnow(),
+            created_at=datetime.now(timezone.utc),
         )
         try:
             db.add(badge)

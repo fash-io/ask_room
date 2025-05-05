@@ -1,36 +1,18 @@
 from pydantic import BaseModel
 from uuid import UUID
-from enum import Enum
-from datetime import datetime
+import enum
 
 
-# Enum to represent the vote values
-class VoteValue(str, Enum):
-    up = "up"
-    down = "down"
+class VoteValue(enum.Enum):
+    down = -1
+    up = 1
 
 
-# Base schema: shared fields for Vote
-class VoteBase(BaseModel):
-    user_id: UUID
+class VoteCreate(BaseModel):
+    question_id: UUID
+    answer_id: UUID
     vote_value: VoteValue
-
-
-# Schema for creating a new Vote
-class VoteCreate(VoteBase):
-    pass
-
-
-# Schema for updating a Vote
-class VoteUpdate(VoteBase):
-    pass
-
-
-# Schema for a Vote response
-class VoteOut(VoteBase):
-    id: UUID
-    target_id: UUID  # ID of the post or answer being voted on
-    created_at: datetime
 
     class Config:
         orm_mode = True
+        

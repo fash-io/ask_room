@@ -1,8 +1,9 @@
 from sqlalchemy.orm import Session
 from uuid import UUID
-from models import Category
-from schemas.category import CategoryCreate, CategoryOut
 from datetime import datetime
+
+from app.models import Category
+from app.schemas.category import CategoryCreate, CategoryOut
 
 def create_category(db: Session, category_data: CategoryCreate) -> CategoryOut:
     # Create a new category
@@ -83,3 +84,17 @@ def delete_category(db: Session, category_id: UUID) -> bool:
         db.commit()
         return True
     return False
+
+def get_categories_fuzzy(db: Session, query: str) -> list[CategoryOut]:
+    # Get all categories that match the query
+    categories = db.query(Category).filter(Category.name.contains(query)).all()
+    return [
+        CategoryOut(
+            id=category.id,
+            name=category.name,
+            description=category.description or "",
+            created_at=category.created_at,
+            updated_at=category.updated_at,
+        )
+        for category in categories
+    ]
