@@ -13,14 +13,14 @@ load_dotenv()
 
 # Read the DATABASE_URL environment variable
 # Fetch variables
-USER = os.getenv("user")
-PASSWORD = os.getenv("password")
-HOST = os.getenv("host")
-PORT = os.getenv("port")
-DBNAME = os.getenv("dbname")
+USER = os.environ.get("user")
+PASSWORD = os.environ.get("password")
+HOST = os.environ.get("host")
+PORT = os.environ.get("port")
+DBNAME = os.environ.get("dbname")
 # Create SQLAlchemy engine
 
-DATABASE_URL = f"postgresql+psycopg2://{USER}:{PASSWORD}@db-attydxjiaoihvxjdqxeu:{PORT}/{DBNAME}?sslmode=require"
+DATABASE_URL = f"postgresql+psycopg2://{USER}:{PASSWORD}@{HOST}:{PORT}/{DBNAME}?sslmode=require"
 
 # echo=True will log all the SQL queries; turn off in production
 engine = create_engine(
