@@ -1,10 +1,4 @@
-"""
-models.py
-
-SQLAlchemy ORM models for the AskRoom Q&A platform.
-"""
-
-import datetime
+from datetime import datetime
 import enum
 import uuid
 from sqlalchemy import (
@@ -16,10 +10,14 @@ from sqlalchemy import (
     Boolean,
     Enum,
     ForeignKey,
+    Table,
 )
-from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
-from database import Base
+from database import Base, get_db
+
+from sqlalchemy.dialects.postgresql import UUID
+
+db = get_db()
 
 
 class UserRole(enum.Enum):
@@ -28,31 +26,55 @@ class UserRole(enum.Enum):
     admin = "admin"
 
 
+class Badge(Base):
+    __tablename__ = "badges"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    name = Column(String(50), unique=True, nullable=False)
+    description = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    users = relationship("User", secondary="user_badges", back_populates="badges")
+
+
+user_badges = Table(
+    "user_badges",
+    Base.metadata,
+    Column("user_id", UUID(as_uuid=True), ForeignKey("users.id")),
+    Column("badge_id", UUID(as_uuid=True), ForeignKey("badges.id")),
+)
+
+followers = Table(
+    "followers",
+    Base.metadata,
+    Column("follower_id", UUID(as_uuid=True), ForeignKey("users.id")),
+    Column("followed_id", UUID(as_uuid=True), ForeignKey("users.id")),
+)
+
+
 class User(Base):
     __tablename__ = "users"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    username = Column(String(50), unique=True, nullable=False)
+    username = Column(String(50), unique=True, nullable=False, index=True)
     email = Column(String(255), unique=True, nullable=False)
     password_hash = Column(String(128), nullable=False)
     display_name = Column(String(100), nullable=True)
     avatar_url = Column(String(255), nullable=True)
     bio = Column(Text, nullable=True)
     reputation = Column(Integer, default=0, nullable=False)
-    created_at = Column(DateTime, default=datetime.datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(
         DateTime,
-        default=datetime.datetime.utcnow,
-        onupdate=datetime.datetime.utcnow,
+        default=datetime.utcnow,
+        onupdate=datetime.utcnow,
         nullable=False,
     )
     last_login = Column(DateTime, nullable=True)
     is_active = Column(Boolean, default=True, nullable=False)
     role = Column(Enum(UserRole), default=UserRole.user, nullable=False)
-    reputation = Column(Integer, default=0, nullable=False)
     social_links = Column(Text, nullable=True)
 
-    # relationships
     questions = relationship(
         "Question", back_populates="author", cascade="all, delete-orphan"
     )
@@ -65,6 +87,15 @@ class User(Base):
     answer_votes = relationship(
         "AnswerVote", back_populates="user", cascade="all, delete-orphan"
     )
+    badges = relationship("Badge", secondary="user_badges", back_populates="users")
+
+
+question_tags = Table(
+    "question_tags",
+    Base.metadata,
+    Column("question_id", UUID(as_uuid=True), ForeignKey("questions.id")),
+    Column("tag_id", UUID(as_uuid=True), ForeignKey("tags.id")),
+)
 
 
 class Question(Base):
@@ -75,14 +106,14 @@ class Question(Base):
     body = Column(Text, nullable=False)
     author_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
     images = Column(Text, nullable=True)
-    created_at = Column(DateTime, default=datetime.datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     category_id = Column(
         UUID(as_uuid=True), ForeignKey("categories.id"), nullable=False
     )
     updated_at = Column(
         DateTime,
-        default=datetime.datetime.utcnow,
-        onupdate=datetime.datetime.utcnow,
+        default=datetime.utcnow,
+        onupdate=datetime.utcnow,
         nullable=False,
     )
 
@@ -95,6 +126,7 @@ class Question(Base):
         "QuestionVote", back_populates="question", cascade="all, delete-orphan"
     )
     tags = relationship("Tag", secondary=question_tags, back_populates="questions")
+    category = relationship("Category", back_populates="questions")
 
 
 class Answer(Base):
@@ -104,11 +136,12 @@ class Answer(Base):
     question_id = Column(UUID(as_uuid=True), ForeignKey("questions.id"), nullable=False)
     body = Column(Text, nullable=False)
     author_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
-    created_at = Column(DateTime, default=datetime.datetime.utcnow, nullable=False)
+    is_helpful = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(
         DateTime,
-        default=datetime.datetime.utcnow,
-        onupdate=datetime.datetime.utcnow,
+        default=datetime.utcnow,
+        onupdate=datetime.utcnow,
         nullable=False,
     )
 
@@ -131,8 +164,8 @@ class QuestionVote(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
     question_id = Column(UUID(as_uuid=True), ForeignKey("questions.id"), nullable=False)
-    vote_value = Column(Integer, nullable=False)
-    created_at = Column(DateTime, default=datetime.datetime.utcnow, nullable=False)
+    vote_value = Column(Enum(VoteValue), nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
     # relationships
     user = relationship("User", back_populates="question_votes")
@@ -145,8 +178,8 @@ class AnswerVote(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
     answer_id = Column(UUID(as_uuid=True), ForeignKey("answers.id"), nullable=False)
-    vote_value = Column(Integer, nullable=False)
-    created_at = Column(DateTime, default=datetime.datetime.utcnow, nullable=False)
+    vote_value = Column(Enum(VoteValue), nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
     # relationships
     user = relationship("User", back_populates="answer_votes")
@@ -158,11 +191,11 @@ class Tag(Base):
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     name = Column(String(50), nullable=False, unique=True)
-    created_at = Column(DateTime, default=datetime.datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(
         DateTime,
-        default=datetime.datetime.utcnow,
-        onupdate=datetime.datetime.utcnow,
+        default=datetime.utcnow,
+        onupdate=datetime.utcnow,
         nullable=False,
     )
 
@@ -175,15 +208,15 @@ class Category(Base):
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     name = Column(String(50), nullable=False, unique=True)
-    created_at = Column(DateTime, default=datetime.datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(
         DateTime,
-        default=datetime.datetime.utcnow,
-        onupdate=datetime.datetime.utcnow,
+        default=datetime.utcnow,
+        onupdate=datetime.utcnow,
         nullable=False,
     )
 
     # relationships
     questions = relationship(
-        "Question", back_populates="categories", cascade="all, delete-orphan"
+        "Question", back_populates="category", cascade="all, delete-orphan"
     )

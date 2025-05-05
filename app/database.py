@@ -12,11 +12,16 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Read the DATABASE_URL environment variable
-DATABASE_URL = os.getenv("DATABASE_URL")
-if not DATABASE_URL:
-    raise RuntimeError("DATABASE_URL environment variable not set")
-
+# Fetch variables
+USER = os.getenv("user")
+PASSWORD = os.getenv("password")
+HOST = os.getenv("host")
+PORT = os.getenv("port")
+DBNAME = os.getenv("dbname")
 # Create SQLAlchemy engine
+
+DATABASE_URL = f"postgresql+psycopg2://{USER}:{PASSWORD}@db-attydxjiaoihvxjdqxeu:{PORT}/{DBNAME}?sslmode=require"
+
 # echo=True will log all the SQL queries; turn off in production
 engine = create_engine(
     DATABASE_URL,
@@ -46,3 +51,9 @@ def get_db():
         yield db
     finally:
         db.close()
+
+try:
+    with engine.connect() as connection:
+        print("Connection successful!")
+except Exception as e:
+    print(f"Failed to connect: {e}")

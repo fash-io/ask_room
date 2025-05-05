@@ -3,6 +3,7 @@ from uuid import UUID
 from datetime import datetime
 from typing import Optional
 
+
 # Base schema: shared fields
 class UserBase(BaseModel):
     username: constr(min_length=3, max_length=50)
@@ -12,15 +13,18 @@ class UserBase(BaseModel):
     bio: Optional[str] = None
     social_links: Optional[str] = None
 
+
 # Schema for creating a new user
 class UserCreate(UserBase):
-    password: constr(min_length=8)
+    password_hash: constr(min_length=8)
+
 
 # Schema for user login
 class UserLogin(BaseModel):
     username: Optional[constr(min_length=3, max_length=50)] = None
     email: Optional[EmailStr] = None
-    password: constr(min_length=8)
+    password_hash: constr(min_length=8)
+
 
 # Schema for responses: include IDs and timestamps
 class UserOut(UserBase):
