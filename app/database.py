@@ -1,30 +1,41 @@
-from sqlalchemy import create_engine
-# from sqlalchemy.pool import NullPool
-from dotenv import load_dotenv
 import os
+from dotenv import load_dotenv
+from sqlalchemy import create_engine, text
+from sqlalchemy.orm import sessionmaker, declarative_base
 
-# Load environment variables from .env
 load_dotenv()
 
-# Fetch variables
-USER = os.getenv("user")
+USER     = os.getenv("user")
 PASSWORD = os.getenv("password")
-HOST = os.getenv("host")
-PORT = os.getenv("port")
-DBNAME = os.getenv("dbname")
+HOST     = os.getenv("host")
+PORT     = os.getenv("port")
+DBNAME   = os.getenv("dbname")
 
-# Construct the SQLAlchemy connection string
-DATABASE_URL = f"postgresql+psycopg2://{USER}:{PASSWORD}@{HOST}:{PORT}/{DBNAME}?sslmode=require"
+DATABASE_URL = (
+    f"postgresql+psycopg2://{USER}:{PASSWORD}@{HOST}:{PORT}/{DBNAME}"
+    "?sslmode=require"
+)
 
-# Create the SQLAlchemy engine
-engine = create_engine(DATABASE_URL)
-# If using Transaction Pooler or Session Pooler, we want to ensure we disable SQLAlchemy client side pooling -
-# https://docs.sqlalchemy.org/en/20/core/pooling.html#switching-pool-implementations
-# engine = create_engine(DATABASE_URL, poolclass=NullPool)
+engine = create_engine(DATABASE_URL, echo=False)
 
-# Test the connection
+SessionLocal = sessionmaker(
+    autocommit=False,
+    autoflush=False,
+    bind=engine,
+)
+
+# 3) Base class for your models
+Base = declarative_base()
+
 try:
     with engine.connect() as connection:
-        print("Connection successful!")
+        print("✅ Connection successful!")
+        
+        # Use SQLAlchemy's execution API
+        result = connection.execute(text("SELECT NOW()"))
+        now = result.scalar_one()
+        print("Current Time:", now)
+        
+    print("🔒 Connection closed.")
 except Exception as e:
-    print(f"Failed to connect: {e}")
+    print(f"❌ Failed to connect: {e}")
