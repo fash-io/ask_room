@@ -6,23 +6,16 @@ import httpx
 import os
 from app.models import User
 from app.crud import user as crud_user
-from app.database import SessionLocal
+from app.database import get_db
 
 
 # Get project details from environment variables
-SUPABASE_PROJECT_ID = os.getenv("SUPABASE_PROJECT_ID")
+SUPABASE_PROJECT_ID = os.getenv("SUPABASE_PROJECT_ID", "attydxjiaoihvxjdqxeu")
 JWKS_URL = f"https://{SUPABASE_PROJECT_ID}.supabase.co/auth/v1/keys"
 AUDIENCE = os.getenv("SUPABASE_JWT_AUDIENCE", "authenticated")
-ISSUER = f"https://{SUPABASE_PROJECT_ID}.supabase.co/auth/v1"
+ISSUER = os.getenv("SUPABASE_JWT_ISSUER", f"https://{SUPABASE_PROJECT_ID}.supabase.co/auth/v1")
 
 _cached_keys = None
-
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
 
 # Fetch the JWKS (JSON Web Key Set) from Supabase
 async def get_jwks():

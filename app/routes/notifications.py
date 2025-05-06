@@ -1,9 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from uuid import UUID
-from typing import List, Optional
 
-from app.dependencies import get_db, get_current_user
+
+from app.dependencies import get_current_user
+from app.database import get_db
 from app.crud import notification as crud_notification
 from app.schemas.notification import NotificationOut, NotificationCreate
 from app.models import User

@@ -214,7 +214,7 @@ def seed_badges():
             db.commit()
             print(f"Added badge: {badge.name}")
         except IntegrityError:
-            db.rollback()  # Badge already exists—skip
+            db.rollback()
             print(f"Badge already exists: {badge.name}")
     db.close()
 

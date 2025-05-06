@@ -5,7 +5,7 @@ from uuid import UUID
 
 from app.crud import badge as crud
 from app.schemas import badge
-from app.dependencies import get_db
+from app.database import get_db
 
 router = APIRouter()
 

@@ -16,7 +16,8 @@ from app.crud.answer import (
 )
 from app.models import Answer
 from app.schemas.answer import AnswerCreate, AnswerOut
-from app.dependencies import get_db, get_current_user
+from app.dependencies import get_current_user
+from app.database import get_db
 
 router = APIRouter()
 

@@ -1,33 +1,37 @@
-import os
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker, declarative_base
-from sqlalchemy.pool import QueuePool
+from sqlalchemy.pool import QueuePool, NullPool
+from dotenv import load_dotenv
+import os
 
-# Get Neon connection details from environment variables
-# These are automatically set by Vercel when you add the Neon integration
-DATABASE_URL = os.environ.get("DATABASE_URL")
-POOLED_DATABASE_URL = os.environ.get("POSTGRES_URL")  # This includes the pooler
+load_dotenv()
 
-# Check if we're in production or development
+DB_USER = os.environ.get("DB_USER", "postgres.attydxjiaoihvxjdqxeu")
+DB_PASSWORD = os.environ.get("DB_PASSWORD", "4WDGBD5YHVDsZXLg")
+DB_HOST = os.environ.get("DB_HOST", "aws-0-eu-central-1.pooler.supabase.com")
+DB_PORT = os.environ.get("DB_PORT", "5432")
+DB_NAME = os.environ.get("DB_NAME", "postgres")
+
+DATABASE_URL = (
+    f"postgresql+psycopg2://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+    "?sslmode=require"
+)
+
 IS_PRODUCTION = os.environ.get("ENVIRONMENT", "development") == "production"
 
-# For production: Use connection pooling
 if IS_PRODUCTION:
-    # Connection pooling configuration
     engine = create_engine(
-        POOLED_DATABASE_URL,
+        DATABASE_URL,
         poolclass=QueuePool,
-        pool_size=10,  # Maintain 10 connections in the pool
-        max_overflow=20,  # Allow up to 20 additional connections when needed
-        pool_timeout=30,  # Wait up to 30 seconds to get a connection
-        pool_recycle=1800,  # Recycle connections after 30 minutes
+        pool_size=10,  
+        max_overflow=20,  
+        pool_timeout=30, 
+        pool_recycle=1800,  
         echo=False
     )
     print("✅ Using connection pooling for production")
-# For development: Use direct connection
 else:
-    # For development, we use a simpler configuration without extensive pooling
-    engine = create_engine(DATABASE_URL, echo=True)  # echo=True for SQL logging in development
+    engine = create_engine(DATABASE_URL, echo=True, poolclass=NullPool) 
     print("✅ Using direct connection for development")
 
 SessionLocal = sessionmaker(
@@ -36,15 +40,12 @@ SessionLocal = sessionmaker(
     bind=engine,
 )
 
-# Base class for your models
 Base = declarative_base()
 
-# Database connection test
 try:
     with engine.connect() as connection:
         print("✅ Connection successful!")
         
-        # Use SQLAlchemy's execution API
         result = connection.execute(text("SELECT NOW()"))
         now = result.scalar_one()
         print("Current Time:", now)

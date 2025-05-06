@@ -5,7 +5,8 @@ from typing import List
 
 from app.schemas.user import UserCreate, UserOut,UserUpdate
 from app.crud import user as crud_user
-from app.dependencies import get_db, get_current_user
+from app.database import get_db
+from app.dependencies import get_current_user
 from app.models import User
 
 router = APIRouter()

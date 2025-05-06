@@ -3,9 +3,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 
 from app.routes import badges, answers, category, questions, tag, users, votes, notifications
-from app.dependencies import get_db
+from app.database import get_db
 from app.crud import question as crud_question, user as crud_users, tag as crud_tags
-from app.models import User
 from app.database import SessionLocal
 from app.health import router as health_router
 from app.middleware.rate_limiter import standard_limiter, search_limiter

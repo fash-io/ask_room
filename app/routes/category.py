@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from uuid import UUID
 from typing import List
 
-from app.dependencies import get_db
+from app.database import get_db
 from app.schemas.category import CategoryCreate, CategoryOut
 from app.crud import category as crud_category
 

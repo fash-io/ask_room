@@ -4,8 +4,9 @@ from uuid import UUID
 from typing import Optional, List, Annotated
 
 from app.crud import question as crud_question
-from app.schemas.question import Question, QuestionCreate, QuestionOut, PaginatedQuestions
-from app.dependencies import get_db, get_current_user
+from app.schemas.question import QuestionCreate, QuestionOut, PaginatedQuestions
+from app.dependencies import get_current_user
+from app.database import get_db
 from app.middleware.rate_limiter import standard_limiter
 
 router = APIRouter()
