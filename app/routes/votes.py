@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from uuid import UUID
-from typing import  Annotated
+from typing import Annotated
 
 from app.dependencies import get_db
 from app.database import get_db
