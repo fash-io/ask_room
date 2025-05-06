@@ -15,4 +15,3 @@ class VoteCreate(BaseModel):
 
     class Config:
         from_attributes = True
-        

@@ -23,7 +23,12 @@ router = APIRouter()
 @router.post("/", response_model=AnswerOut)
 def create_answer_handler(answer: AnswerCreate, db: Session = Depends(get_db), user_id: UUID = Depends(get_current_user)):
     try:
-        return create_answer_crud(db, answer, user_id)
+        new_answer = create_answer_crud(db, answer, user_id)
+        from app.services.badges import check_and_award_badges
+        from app.crud.user import get_user_by_id
+        user = get_user_by_id(db, user_id)
+        check_and_award_badges(db, user)
+        return new_answer
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
 

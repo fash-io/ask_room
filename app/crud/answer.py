@@ -3,6 +3,7 @@ from uuid import UUID
 
 from app.schemas.answer import AnswerCreate
 from app.models import Answer, Question, AnswerVote, VoteValue
+from app.crud.notification import notify_new_answer
 
 def create_answer(db: Session, answer_data: AnswerCreate, user_id: UUID):
     # Ensure the question exists
@@ -19,6 +20,17 @@ def create_answer(db: Session, answer_data: AnswerCreate, user_id: UUID):
     db.add(answer)
     db.commit()
     db.refresh(answer)
+    
+    # Create a notification for the question author
+    if question.author_id != user_id:  # Don't notify if answering own question
+        notify_new_answer(
+            db, 
+            question.author_id, 
+            question.id, 
+            question.title, 
+            answer.id
+        )
+    
     return answer
 
 
@@ -145,7 +157,18 @@ def delete_answer(db: Session, answer_id: UUID):
     return False
 
 def update_answer_helpful(db: Session, answer: Answer, is_helpful: bool):
+    from app.crud.notification import notify_answer_accepted
+    
+    # Get the question to use in the notification
+    question = db.query(Question).filter(Question.id == answer.question_id).first()
+    
+    # Update the answer
     answer.is_helpful = is_helpful
     db.commit()
     db.refresh(answer)
+    
+    # If marked as helpful, create a notification for the answer author
+    if is_helpful and question and answer.author_id != question.author_id:
+        notify_answer_accepted(db, answer.author_id, question.id, question.title)
+    
     return answer

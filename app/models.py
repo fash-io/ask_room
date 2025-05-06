@@ -11,11 +11,12 @@ from sqlalchemy import (
     Enum,
     ForeignKey,
     Table,
+    Index,
 )
 from sqlalchemy.orm import relationship
 from app.database import Base
 
-from sqlalchemy.dialects.postgresql import UUID, JSONB
+from sqlalchemy.dialects.postgresql import UUID, JSONB, TSVECTOR
 
 class UserRole(enum.Enum):
     user = "user"
@@ -34,6 +35,8 @@ class BadgeCategory(enum.Enum):
     participation = "participation"
     quality       = "quality"
     community     = "community"
+    achievement   = "achievement" 
+    moderation    = "moderation"  
 
 class BadgeLevel(enum.Enum):
     bronze = "bronze"
@@ -51,6 +54,7 @@ class Badge(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     level = Column(Enum(BadgeLevel), default=BadgeLevel.bronze, nullable=False)
     category = Column(Enum(BadgeCategory), nullable=False)
+    icon = Column(String(100), nullable=True) 
 
     users = relationship("User", secondary=user_badges, back_populates="badges")
 
@@ -100,6 +104,9 @@ class User(Base):
         "AnswerVote", back_populates="user", cascade="all, delete-orphan"
     )
     badges = relationship("Badge", secondary=user_badges, back_populates="users")
+    notifications = relationship(
+        "Notification", back_populates="user", cascade="all, delete-orphan"
+    )
     
     following = relationship(
     "User",
@@ -141,6 +148,8 @@ class Question(Base):
         onupdate=datetime.utcnow,
         nullable=False,
     )
+    view_count = Column(Integer, default=0, nullable=False)  # New field for tracking views
+    search_vector = Column(TSVECTOR)  # For full-text search
 
     # relationships
     author = relationship("User", back_populates="questions")
@@ -152,6 +161,11 @@ class Question(Base):
     )
     tags = relationship("Tag", secondary=question_tags, back_populates="questions")
     category = relationship("Category", back_populates="questions")
+
+    # Add full-text search index
+    __table_args__ = (
+        Index('idx_question_search_vector', 'search_vector', postgresql_using='gin'),
+    )
 
 
 class Answer(Base):
@@ -169,12 +183,18 @@ class Answer(Base):
         onupdate=datetime.utcnow,
         nullable=False,
     )
+    search_vector = Column(TSVECTOR)  # For full-text search
 
     # relationships
     question = relationship("Question", back_populates="answers")
     author = relationship("User", back_populates="answers")
     votes = relationship(
         "AnswerVote", back_populates="answer", cascade="all, delete-orphan"
+    )
+
+    # Add full-text search index
+    __table_args__ = (
+        Index('idx_answer_search_vector', 'search_vector', postgresql_using='gin'),
     )
 
 
@@ -233,6 +253,7 @@ class Category(Base):
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     name = Column(String(50), nullable=False, unique=True)
+    description = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(
         DateTime,
@@ -245,3 +266,28 @@ class Category(Base):
     questions = relationship(
         "Question", back_populates="category", cascade="all, delete-orphan"
     )
+
+
+class NotificationType(enum.Enum):
+    answer_posted = "answer_posted"
+    answer_accepted = "answer_accepted"
+    badge_earned = "badge_earned"
+    comment_posted = "comment_posted"
+    question_upvoted = "question_upvoted"
+    answer_upvoted = "answer_upvoted"
+    user_mentioned = "user_mentioned"
+
+
+class Notification(Base):
+    __tablename__ = "notifications"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    type = Column(Enum(NotificationType), nullable=False)
+    message = Column(Text, nullable=False)
+    link = Column(String(255), nullable=True)  # URL to the relevant content
+    is_read = Column(Boolean, default=False, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    
+    # relationships
+    user = relationship("User", back_populates="notifications")

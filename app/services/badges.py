@@ -1,8 +1,9 @@
 from app.crud.badge import get_all_badges, user_has_badge, award_badge
+from app.crud.notification import notify_badge_earned
 from sqlalchemy.orm import Session
 from typing import List
 from datetime import datetime, timezone
-from models import Badge, User
+from app.models import Badge, User
 
 
 def check_and_award_badges(db: Session, user: User) -> List[Badge]:
@@ -17,8 +18,12 @@ def check_and_award_badges(db: Session, user: User) -> List[Badge]:
         "approved_answers": user.approved_answers_count(),
         "reputation": user.reputation,
         "questions_posted": len(user.questions),
-        "upvotes_received": user.answer_votes.filter_by(vote_value="upvote").count(), 
-        "join_date": days_since_join
+        "upvotes_received": sum(1 for vote in user.answer_votes if vote.vote_value.name == "up"),
+        "downvotes_received": sum(1 for vote in user.answer_votes if vote.vote_value.name == "down"),
+        "join_date": days_since_join,
+        "consecutive_days": 7,  # This would need to be calculated from login history
+        "tags_created": 0,  # This would need to be calculated
+        "edits_made": 0,  # This would need to be calculated
     }
 
     for badge in get_all_badges(db):
@@ -27,9 +32,10 @@ def check_and_award_badges(db: Session, user: User) -> List[Badge]:
 
         if badge_type == "join_date":
             threshold_days = crit.get("threshold_days", 0)
-            if days_since_join <= threshold_days:
+            if days_since_join >= threshold_days:
                 if not user_has_badge(db, user.id, badge.id):
                     award_badge(db, user.id, badge.id)
+                    notify_badge_earned(db, user.id, badge.name, badge.id)
                     earned.append(badge)
 
         elif badge_type in stats:
@@ -38,7 +44,7 @@ def check_and_award_badges(db: Session, user: User) -> List[Badge]:
             if user_stat >= threshold:
                 if not user_has_badge(db, user.id, badge.id):
                     award_badge(db, user.id, badge.id)
+                    notify_badge_earned(db, user.id, badge.name, badge.id)
                     earned.append(badge)
-
 
     return earned

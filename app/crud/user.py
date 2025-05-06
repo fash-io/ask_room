@@ -129,4 +129,3 @@ def get_users_fuzzy(db: Session, query: str, threshold: int = 70, limit: int = 2
 
     fuzzy_matches.sort(reverse=True, key=lambda x: x[0])
     return [user for _, user in fuzzy_matches[:limit]]
-

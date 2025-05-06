@@ -24,6 +24,7 @@ class Question(QuestionBase):
     id: UUID
     created_at: datetime
     updated_at: datetime
+    view_count: int = 0  # Added view_count field
 
     class Config:
         from_attributes = True
