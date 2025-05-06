@@ -3,9 +3,9 @@ from uuid import UUID
 from datetime import datetime
 from passlib.context import CryptContext
 from rapidfuzz import fuzz
-
+from sqlalchemy import func
 from app.models import User
-from app.schemas.user import UserCreate, UserOut
+from app.schemas.user import UserCreate, UserOut, UserUpdate
 
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -21,7 +21,7 @@ def create_user(db: Session, user_data: UserCreate):
         raise ValueError("Username or Email already exists")
     
     # Hash the user's password
-    hashed_password = pwd_context.hash(user_data.password)
+    hashed_password = pwd_context.hash(user_data.password_hash)
     
     # Create new user
     user = User(
@@ -55,7 +55,7 @@ def get_user_by_id(db: Session, user_id: UUID) -> UserOut:
 
 def get_user_by_username(db: Session, username: str) -> UserOut:
     # Get user by username and return in UserOut format
-    user = db.query(User).filter(User.username == username).first()
+    user = db.query(User).filter(func.lower(User.username) == username.lower()).first()
     if user:
         return user
     return None
@@ -69,8 +69,10 @@ def get_user_by_email(db: Session, email: str) -> UserOut:
     return None
 
 
-def update_user(db: Session, user_id: UUID, user_data: UserCreate) -> UserOut:
+def update_user(db: Session, user_id: UUID, user_data: UserUpdate) -> UserOut:
+    print("reached")
     user = db.query(User).filter(User.id == user_id).first()
+    print("reached")
     if user:
         user.username = user_data.username if user_data.username else user.username
         user.email = user_data.email if user_data.email else user.email
@@ -80,13 +82,13 @@ def update_user(db: Session, user_id: UUID, user_data: UserCreate) -> UserOut:
         user.social_links = user_data.social_links if user_data.social_links else user.social_links
         user.updated_at = datetime.utcnow()
 
-        if user_data.password_hash:
-            user.password_hash = pwd_context.hash(user_data.password_hash)
+        # if user_data.password_hash:
+        #     user.password_hash = pwd_context.hash(user_data.password_hash)
 
         db.commit()
         db.refresh(user)
 
-        return UserOut(**user)
+        return user
     return None
 
 def update_user_password(db: Session, user_id: UUID, password: str) -> UserOut:
@@ -96,7 +98,7 @@ def update_user_password(db: Session, user_id: UUID, password: str) -> UserOut:
         
     db.commit()
     db.refresh(user)
-    return UserOut(**user)
+    return user
 
 
 def delete_user(db: Session, user_id: UUID) -> bool:
@@ -108,11 +110,23 @@ def delete_user(db: Session, user_id: UUID) -> bool:
         return True
     return False
 
-def get_users_fuzzy(db: Session, query: str):
-    users = db.query(User).all()
-    matches = [
-        q for q in users
-        if fuzz.partial_ratio(query.lower(), q.username.lower()) > 70
-        or fuzz.partial_ratio(query.lower(), q.display_name.lower()) > 70
-    ]
-    return matches
+
+def get_users_fuzzy(db: Session, query: str, threshold: int = 70, limit: int = 20):
+    query_lower = query.lower()
+    all_users = db.query(User).limit(500).all()
+
+    fuzzy_matches = []
+    for user in all_users:
+        username = user.username or ""
+        display_name = user.display_name or ""
+
+        score = max(
+            fuzz.partial_ratio(query_lower, username.lower()),
+            fuzz.partial_ratio(query_lower, display_name.lower())
+        )
+        if score >= threshold:
+            fuzzy_matches.append((score, user))
+
+    fuzzy_matches.sort(reverse=True, key=lambda x: x[0])
+    return [user for _, user in fuzzy_matches[:limit]]
+

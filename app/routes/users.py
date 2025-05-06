@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from uuid import UUID
 from typing import List
 
-from app.schemas.user import UserCreate, UserOut
+from app.schemas.user import UserCreate, UserOut,UserUpdate
 from app.crud import user as crud_user
 from app.dependencies import get_db, get_current_user
 from app.models import User
@@ -65,9 +65,15 @@ def get_user_by_email(email: str, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="User not found")
     return user
 
+@router.get("/search/{query}", response_model=List[UserOut])
+def search_users(query: str, db: Session = Depends(get_db)):
+    users = crud_user.get_users_fuzzy(db, query)
+    if len(users):
+        return users
+    raise HTTPException(status_code=404, detail="No users found")
 
 @router.put("/{user_id}", response_model=UserOut)
-def update_user(user_id: UUID, user_data: UserCreate, db: Session = Depends(get_db)):
+def update_user(user_id: UUID, user_data: UserUpdate, db: Session = Depends(get_db)):
     updated_user = crud_user.update_user(db, user_id, user_data)
     if not updated_user:
         raise HTTPException(status_code=404, detail="User not found")

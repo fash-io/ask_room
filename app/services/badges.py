@@ -14,7 +14,7 @@ def check_and_award_badges(db: Session, user: User) -> List[Badge]:
     # Calculate user stats
     stats = {
         "answers_posted": len(user.answers),
-        "approved_answers": user.approved_answers_count,
+        "approved_answers": user.approved_answers_count(),
         "reputation": user.reputation,
         "questions_posted": len(user.questions),
         "upvotes_received": user.answer_votes.filter_by(vote_value="upvote").count(), 

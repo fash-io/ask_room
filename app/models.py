@@ -85,6 +85,7 @@ class User(Base):
     is_active = Column(Boolean, default=True, nullable=False)
     role = Column(Enum(UserRole), default=UserRole.user, nullable=False)
     social_links = Column(Text, nullable=True)
+    # approved_answers = Column(Integer, default=0, nullable=False)
 
     questions = relationship(
         "Question", back_populates="author", cascade="all, delete-orphan"

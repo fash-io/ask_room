@@ -15,7 +15,7 @@ class QuestionBase(BaseModel):
     tags: Optional[List[UUID]] = []
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class QuestionCreate(QuestionBase):
     pass
@@ -26,7 +26,7 @@ class Question(QuestionBase):
     updated_at: datetime
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class QuestionOut(Question):
     author: UserOut
@@ -34,4 +34,8 @@ class QuestionOut(Question):
     category: CategoryOut
 
     class Config:
-        orm_mode = True
+        from_attributes = True
+
+class PaginatedQuestions(BaseModel):
+    total: int
+    items: List[QuestionOut]

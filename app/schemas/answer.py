@@ -9,7 +9,7 @@ class AnswerBase(BaseModel):
     author_id: UUID 
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class AnswerCreate(AnswerBase):
     pass
@@ -20,7 +20,7 @@ class Answer(AnswerBase):
     updated_at: datetime
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class AnswerOut(Answer):
     author: UserOut  # nested author object
@@ -28,4 +28,4 @@ class AnswerOut(Answer):
     downvotes: int
 
     class Config:
-        orm_mode = True
+        from_attributes = True

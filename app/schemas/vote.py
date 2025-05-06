@@ -14,5 +14,5 @@ class VoteCreate(BaseModel):
     vote_value: VoteValue
 
     class Config:
-        orm_mode = True
+        from_attributes = True
         

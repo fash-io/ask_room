@@ -10,7 +10,7 @@ class BadgeOut(BaseModel):
     description: Optional[str]
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class UserBase(BaseModel):
@@ -23,6 +23,11 @@ class UserBase(BaseModel):
 
 class UserCreate(UserBase):
     password_hash: constr(min_length=8)
+
+class UserUpdate(UserBase):
+    username: Optional[str]
+    email: Optional[EmailStr]
+    # password_hash: Optional[str]
 
 class UserLogin(BaseModel):
     username: Optional[constr(min_length=3, max_length=50)] = None
@@ -38,7 +43,7 @@ class UserOut(UserBase):
     is_active: bool
     role: str
     badges: List[BadgeOut] = []
-    approved_answers_count: int
+    # approved_answers: int
 
     class Config:
-        orm_mode = True
+        from_attributes = True

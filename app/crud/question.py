@@ -1,6 +1,7 @@
 from uuid import UUID
 from sqlalchemy.orm import Session
 from rapidfuzz import fuzz
+from sqlalchemy import or_
 
 from app.models import Question, Tag
 from app.schemas.question import QuestionCreate
@@ -28,21 +29,34 @@ def create_question(db: Session, question_data: QuestionCreate, user_id: UUID):
 def get_question_by_id(db: Session, question_id: UUID):
     return db.query(Question).filter(Question.id == question_id).first()
 
-# Get all questions (for simplicity, without pagination)
-def get_all_questions(db: Session):
-    return db.query(Question).all()
+def get_all_questions(db: Session, skip: int = 0, limit: int = 10):
+    total = db.query(Question).count()
+    items = db.query(Question).offset(skip).limit(limit).all()
+    return {"total": total, "items": items}
 
-def get_questions_by_category(db: Session, category_id: UUID):
-    return db.query(Question).filter(Question.category_id == category_id).all()
+def get_questions_by_category(db: Session, category_id: UUID, skip: int = 0, limit: int = 10):
+    query = db.query(Question).filter(Question.category_id == category_id)
+    total = query.count()
+    items = query.offset(skip).limit(limit).all()
+    return {"total": total, "items": items}
 
-def get_questions_by_tag(db: Session, tag_id: UUID):
-    return db.query(Question).join(Question.tags).filter(Tag.id == tag_id).all()
+def get_questions_by_tag(db: Session, tag_id: UUID, skip: int = 0, limit: int = 10):
+    query = db.query(Question).join(Question.tags).filter(Tag.id == tag_id)
+    total = query.count()
+    items = query.offset(skip).limit(limit).all()
+    return {"total": total, "items": items}
 
-def get_questions_by_user(db: Session, user_id: UUID):
-    return db.query(Question).filter(Question.author_id == user_id).all()
+def get_questions_by_user(db: Session, user_id: UUID, skip: int = 0, limit: int = 10):
+    query = db.query(Question).filter(Question.author_id == user_id)
+    total = query.count()
+    items = query.offset(skip).limit(limit).all()
+    return {"total": total, "items": items}
 
-def get_questions_by_title(db: Session, title: str):
-    return db.query(Question).filter(Question.title.contains(title)).all()
+def get_questions_by_title(db: Session, title: str, skip: int = 0, limit: int = 10):
+    query = db.query(Question).filter(Question.title.contains(title))
+    total = query.count()
+    items = query.offset(skip).limit(limit).all()
+    return {"total": total, "items": items}
 
 
 # Update a question
@@ -73,11 +87,10 @@ def delete_question(db: Session, question_id: UUID):
     return False
 
 
-def get_questions_fuzzy(db: Session, query: str):
-    questions = db.query(Question).all()
-    matches = [
-        q for q in questions
-        if fuzz.partial_ratio(query.lower(), q.title.lower()) > 70
-        or fuzz.partial_ratio(query.lower(), q.body.lower()) > 70
-    ]
-    return matches
+def search_questions_pg_trgm(db: Session, query: str, limit: int = 20):
+    return db.query(Question).filter(
+        or_(
+            Question.title.ilike(f"%{query}%"),
+            Question.body.ilike(f"%{query}%")
+        )
+    ).limit(limit).all()

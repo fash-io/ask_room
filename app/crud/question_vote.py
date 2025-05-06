@@ -12,8 +12,11 @@ def create_question_vote(db: Session, vote_data: VoteCreate, user_id: UUID):
         .filter(QuestionVote.question_id == vote_data.question_id, QuestionVote.user_id == user_id)
         .first()
     )
-    if existing_vote:
-        return {"message": "You have already voted on this question"}
+    if existing_vote and existing_vote.vote_value == vote_data.vote_value:
+        return {"message": "You have already voted on this answer"}
+
+    if existing_vote and existing_vote.vote_value != vote_data.vote_value:
+        update_question_vote(db, existing_vote.id, vote_data)
 
     # Create a new vote entry
     vote = QuestionVote(
