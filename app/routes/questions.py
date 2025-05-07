@@ -7,9 +7,13 @@ from app.crud import question as crud_question
 from app.schemas.question import QuestionCreate, QuestionOut, PaginatedQuestions
 from app.dependencies import get_current_user
 from app.database import get_db
-from app.middleware.rate_limiter import standard_limiter
+from redis.asyncio import from_url, Redis
+from app.middleware.rate_limiter import RateLimiter
+import os
+
 
 router = APIRouter()
+search_limiter = RateLimiter(times=30, seconds=60)
 
 @router.post("/", response_model=QuestionOut)
 def create_question_handler(question: QuestionCreate, db: Session = Depends(get_db), current_user: UUID = Depends(get_current_user)):
@@ -110,7 +114,7 @@ def get_questions_by_tag_handler(
 ):
     return crud_question.get_questions_by_tag(db, tag_id, skip=skip, limit=limit)
 
-@router.get("/search/{query}", response_model=List[QuestionOut], dependencies=[Depends(standard_limiter)])
+@router.get("/search/{query}", response_model=List[QuestionOut], dependencies=[Depends(search_limiter)])
 def search_questions(
     query: str, 
     method: Optional[str] = "full-text",

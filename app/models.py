@@ -89,7 +89,6 @@ class User(Base):
     is_active = Column(Boolean, default=True, nullable=False)
     role = Column(Enum(UserRole), default=UserRole.user, nullable=False)
     social_links = Column(Text, nullable=True)
-    # approved_answers = Column(Integer, default=0, nullable=False)
 
     questions = relationship(
         "Question", back_populates="author", cascade="all, delete-orphan"
@@ -148,10 +147,9 @@ class Question(Base):
         onupdate=datetime.utcnow,
         nullable=False,
     )
-    view_count = Column(Integer, default=0, nullable=False)  # New field for tracking views
-    search_vector = Column(TSVECTOR)  # For full-text search
+    view_count = Column(Integer, default=0, nullable=False) 
+    search_vector = Column(TSVECTOR)  
 
-    # relationships
     author = relationship("User", back_populates="questions")
     answers = relationship(
         "Answer", back_populates="question", cascade="all, delete-orphan"
@@ -162,7 +160,6 @@ class Question(Base):
     tags = relationship("Tag", secondary=question_tags, back_populates="questions")
     category = relationship("Category", back_populates="questions")
 
-    # Add full-text search index
     __table_args__ = (
         Index('idx_question_search_vector', 'search_vector', postgresql_using='gin'),
     )
@@ -183,16 +180,14 @@ class Answer(Base):
         onupdate=datetime.utcnow,
         nullable=False,
     )
-    search_vector = Column(TSVECTOR)  # For full-text search
+    search_vector = Column(TSVECTOR) 
 
-    # relationships
     question = relationship("Question", back_populates="answers")
     author = relationship("User", back_populates="answers")
     votes = relationship(
         "AnswerVote", back_populates="answer", cascade="all, delete-orphan"
     )
 
-    # Add full-text search index
     __table_args__ = (
         Index('idx_answer_search_vector', 'search_vector', postgresql_using='gin'),
     )
@@ -212,7 +207,6 @@ class QuestionVote(Base):
     vote_value = Column(Enum(VoteValue), nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
-    # relationships
     user = relationship("User", back_populates="question_votes")
     question = relationship("Question", back_populates="votes")
 
@@ -226,7 +220,6 @@ class AnswerVote(Base):
     vote_value = Column(Enum(VoteValue), nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
-    # relationships
     user = relationship("User", back_populates="answer_votes")
     answer = relationship("Answer", back_populates="votes")
 
@@ -244,7 +237,6 @@ class Tag(Base):
         nullable=False,
     )
 
-    # relationships
     questions = relationship("Question", secondary=question_tags, back_populates="tags")
 
 
@@ -262,7 +254,6 @@ class Category(Base):
         nullable=False,
     )
 
-    # relationships
     questions = relationship(
         "Question", back_populates="category", cascade="all, delete-orphan"
     )
@@ -285,7 +276,7 @@ class Notification(Base):
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
     type = Column(Enum(NotificationType), nullable=False)
     message = Column(Text, nullable=False)
-    link = Column(String(255), nullable=True)  # URL to the relevant content
+    link = Column(String(255), nullable=True) 
     is_read = Column(Boolean, default=False, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     

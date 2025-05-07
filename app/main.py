@@ -1,4 +1,4 @@
-from fastapi import FastAPI, APIRouter, Depends, Request, Response
+from fastapi import FastAPI, APIRouter, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 
@@ -15,27 +15,29 @@ from app.routes import (
 from app.database import get_db
 from app.crud import question as crud_question, user as crud_users, tag as crud_tags
 from app.health import router as health_router
-from aioredis import from_url, Redis
+from redis.asyncio import from_url, Redis
 from app.middleware.rate_limiter import RateLimiter
-import os
+import os, logging
 
 app = FastAPI(
-    title="Q&A API",
-    description="API for a Q&A platform similar to Stack Overflow",
+    title="CurioRoom API",
+    description="API for a CurioRoom similar to Stack Overflow",
     version="1.0.0",
 )
 
 
 @app.on_event("startup")
 async def startup():
-    # Create a single Redis pool
     redis_url = os.getenv("REDIS_URL", "redis://localhost:6379/0")
-    app.state.redis: Redis = await from_url(
-        redis_url, encoding="utf8", decode_responses=True
-    )
-    # Optionally test the connection
-    await app.state.redis.ping()
-
+    try:
+        app.state.redis: Redis = await from_url(
+            redis_url, encoding="utf8", decode_responses=True
+        )
+        await app.state.redis.ping()
+        logging.info("✅ Connected to Redis")
+    except Exception as e:
+        app.state.redis = None
+        logging.warning(f"⚠️  Could not connect to Redis ({redis_url}): {e}")
 
 @app.on_event("shutdown")
 async def shutdown():
@@ -47,17 +49,15 @@ question_limiter = RateLimiter(times=60, seconds=60)
 auth_limiter = RateLimiter(times=10, seconds=60)
 search_limiter = RateLimiter(times=30, seconds=60)
 
-# Configure CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Update this with your frontend URL in production
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 
-# Add request ID middleware
 @app.middleware("http")
 async def add_request_id(request: Request, call_next):
     import uuid
@@ -68,7 +68,6 @@ async def add_request_id(request: Request, call_next):
     return response
 
 
-# Add response time middleware
 @app.middleware("http")
 async def add_process_time_header(request: Request, call_next):
     import time
@@ -82,7 +81,6 @@ async def add_process_time_header(request: Request, call_next):
 
 router = APIRouter()
 
-# Include feature routers
 app.include_router(badges.router, prefix="/api/badges", tags=["Badges"])
 app.include_router(answers.router, prefix="/api/answers", tags=["Answer"])
 app.include_router(category.router, prefix="/api/categories", tags=["Category"])
@@ -119,7 +117,7 @@ app.include_router(router)
 @app.get("/", tags=["Root"])
 def read_root():
     return {
-        "message": "Welcome to the Q&A API",
+        "message": "Welcome to the CurioRoom API",
         "version": "1.0.0",
         "docs_url": "/docs",
         "redoc_url": "/redoc",

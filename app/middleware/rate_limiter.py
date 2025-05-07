@@ -2,7 +2,7 @@
 import time
 from fastapi import Request, HTTPException, status
 from starlette.datastructures import State
-from aioredis import Redis
+from redis.asyncio import Redis, from_url
 
 
 class RateLimiter:
