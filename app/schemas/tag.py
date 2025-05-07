@@ -13,8 +13,7 @@ class TagCreate(TagBase):
 # What we return in API responses
 class TagOut(TagBase):
     id: UUID
-    created_at: datetime
-    updated_at: datetime
 
     class Config:
         from_attributes = True
+

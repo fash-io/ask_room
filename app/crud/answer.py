@@ -96,7 +96,6 @@ def upvote_answer(db: Session, answer_id: UUID, user_id: UUID):
 
 
 def downvote_answer(db: Session, answer_id: UUID, user_id: UUID):
-    # Check if the user has already voted on this answer
     existing_vote = (
         db.query(AnswerVote)
         .filter(AnswerVote.answer_id == answer_id, AnswerVote.user_id == user_id)
@@ -112,7 +111,6 @@ def downvote_answer(db: Session, answer_id: UUID, user_id: UUID):
             db.commit()
             return {"message": "Upvote changed to downvote"}
 
-    # Create a new downvote entry if no existing vote
     vote = AnswerVote(answer_id=answer_id, user_id=user_id, vote_value=VoteValue.down)
     db.add(vote)
     db.commit()
@@ -122,7 +120,6 @@ def downvote_answer(db: Session, answer_id: UUID, user_id: UUID):
 
 
 def get_votes_for_answer(db: Session, answer_id: UUID):
-    # Get the total upvotes and downvotes for an answer
     upvotes = (
         db.query(AnswerVote)
         .filter(AnswerVote.answer_id == answer_id, AnswerVote.vote_value == VoteValue.up)

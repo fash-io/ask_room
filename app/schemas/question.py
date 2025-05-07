@@ -5,6 +5,7 @@ from typing import List, Optional
 from app.schemas.user import UserOut
 from app.schemas.tag import TagOut
 from app.schemas.category import CategoryOut
+from app.schemas.answer import AnswerOut
 
 class QuestionBase(BaseModel):
     title: str
@@ -40,3 +41,11 @@ class QuestionOut(Question):
 class PaginatedQuestions(BaseModel):
     total: int
     items: List[QuestionOut]
+
+class QuestionOutWithAnswers(QuestionOut):
+    answers: List[AnswerOut]
+
+    class Config:
+        from_attributes = True
+        
+        

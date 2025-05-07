@@ -2,11 +2,13 @@ from pydantic import BaseModel
 from uuid import UUID
 from datetime import datetime
 from app.schemas.user import UserOut  
+from app.schemas.vote import VoteOut
 
 class AnswerBase(BaseModel):
     body: str
     question_id: UUID
     author_id: UUID 
+    is_helpful: bool
 
     class Config:
         from_attributes = True
@@ -23,9 +25,7 @@ class Answer(AnswerBase):
         from_attributes = True
 
 class AnswerOut(Answer):
-    author: UserOut  # nested author object
-    upvotes: int
-    downvotes: int
-
+    author: UserOut  
+    votes: list[VoteOut]
     class Config:
         from_attributes = True

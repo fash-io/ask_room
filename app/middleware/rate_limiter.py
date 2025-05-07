@@ -1,44 +1,51 @@
-# app/ratelimiter.py
+from fastapi import Request, HTTPException
 import time
-from fastapi import Request, HTTPException, status
-from starlette.datastructures import State
-from redis.asyncio import Redis, from_url
+from collections import defaultdict
+import threading
 
 
 class RateLimiter:
-    def __init__(self, times: int, seconds: int):
-        """
-        :param times:    max number of requests
-        :param seconds:  per this many seconds
-        """
-        self.times = times
-        self.seconds = seconds
+    def __init__(self, requests_per_minute=60):
+        self.requests_per_minute = requests_per_minute
+        self.requests = defaultdict(list)
+        self.lock = threading.Lock()
 
     async def __call__(self, request: Request):
-        # Pull Redis client out of app.state
-        redis: Redis = request.app.state.redis  
         client_ip = request.client.host
-        # You can also scope per-endpoint:
-        route = request.url.path
-        key = f"rate:{client_ip}:{route}"
+        current_time = time.time()
 
-        # Current window count
-        count = await redis.incr(key)
-        if count == 1:
-            # First hit in this window—set TTL
-            await redis.expire(key, self.seconds)
+        with self.lock:
+            # Remove requests older than 1 minute
+            self.requests[client_ip] = [
+                t for t in self.requests[client_ip] if current_time - t < 60
+            ]
 
-        if count > self.times:
-            # Too many
-            ttl = await redis.ttl(key)
-            raise HTTPException(
-                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                detail={
-                    "error": "Rate limit exceeded",
-                    "limit": self.times,
-                    "per": f"{self.seconds} seconds",
-                    "retry_after": ttl,
-                },
-            )
-        # Otherwise: allow
+            # Check if rate limit exceeded
+            if len(self.requests[client_ip]) >= self.requests_per_minute:
+                raise HTTPException(
+                    status_code=429,
+                    detail={
+                        "error": "Rate limit exceeded",
+                        "limit": self.requests_per_minute,
+                        "per": "minute",
+                        "retry_after": 60
+                        - int(current_time - self.requests[client_ip][0]),
+                    },
+                )
+
+            # Add current request timestamp
+            self.requests[client_ip].append(current_time)
+
         return True
+
+
+# Create instances with different limits for different endpoints
+standard_limiter = RateLimiter(
+    requests_per_minute=60
+)  # 60 requests per minute for most endpoints
+auth_limiter = RateLimiter(
+    requests_per_minute=10
+)  # 10 requests per minute for auth endpoints
+search_limiter = RateLimiter(
+    requests_per_minute=30
+)  # 30 requests per minute for search endpoints

@@ -4,16 +4,11 @@ from uuid import UUID
 from typing import Optional, List, Annotated
 
 from app.crud import question as crud_question
-from app.schemas.question import QuestionCreate, QuestionOut, PaginatedQuestions
-from app.dependencies import get_current_user
-from app.database import get_db
-from redis.asyncio import from_url, Redis
-from app.middleware.rate_limiter import RateLimiter
-import os
-
+from app.schemas.question import QuestionOutWithAnswers, QuestionCreate, QuestionOut, PaginatedQuestions
+from app.dependencies import get_db, get_current_user
+from app.middleware.rate_limiter import standard_limiter
 
 router = APIRouter()
-search_limiter = RateLimiter(times=30, seconds=60)
 
 @router.post("/", response_model=QuestionOut)
 def create_question_handler(question: QuestionCreate, db: Session = Depends(get_db), current_user: UUID = Depends(get_current_user)):
@@ -35,7 +30,6 @@ def get_trending_questions(
     limit: Annotated[int, Query(gt=0, le=50)] = 10,
     db: Session = Depends(get_db)
 ):
-    """Get trending questions based on view count in the last week"""
     return crud_question.get_trending_questions(db, limit=limit)
 
 @router.get("/hot", response_model=List[QuestionOut])
@@ -46,7 +40,7 @@ def get_hot_questions(
     """Get hot questions based on recent answer activity"""
     return crud_question.get_hot_questions(db, limit=limit)
 
-@router.get("/{question_id}", response_model=QuestionOut)
+@router.get("/{question_id}", response_model=QuestionOutWithAnswers)
 def get_question_by_id(
     question_id: UUID, 
     increment_view: bool = True,
@@ -64,7 +58,6 @@ def update_question_handler(
     db: Session = Depends(get_db),
     current_user: UUID = Depends(get_current_user)
 ):
-    # First check if the user is the author of the question
     existing_question = crud_question.get_question_by_id(db, question_id, increment_view=False)
     if not existing_question:
         raise HTTPException(status_code=404, detail="Question not found")
@@ -83,7 +76,6 @@ def delete_question_handler(
     db: Session = Depends(get_db),
     current_user: UUID = Depends(get_current_user)
 ):
-    # First check if the user is the author of the question
     existing_question = crud_question.get_question_by_id(db, question_id, increment_view=False)
     if not existing_question:
         raise HTTPException(status_code=404, detail="Question not found")
@@ -114,7 +106,7 @@ def get_questions_by_tag_handler(
 ):
     return crud_question.get_questions_by_tag(db, tag_id, skip=skip, limit=limit)
 
-@router.get("/search/{query}", response_model=List[QuestionOut], dependencies=[Depends(search_limiter)])
+@router.get("/search/{query}", response_model=List[QuestionOut], dependencies=[Depends(standard_limiter)])
 def search_questions(
     query: str, 
     method: Optional[str] = "full-text",
